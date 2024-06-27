@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown to HTML Converter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #output {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 4px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    th, td {
+      width: 25%; /* Make columns the same size */
+    }
+    .table-separator {
+      border-bottom: 2px solid black;
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Markdown to HTML Converter</h1>
+  <textarea id="markdown-input" placeholder="Enter your Markdown here..."></textarea>
+  <button onclick="convertMarkdown()">Convert to HTML</button>
+  <div id="output"></div>
+</div>
+
+<script>
+  function convertMarkdownToHtml(markdown) {
+    // Helper function to escape HTML special characters
+    const escapeHtml = (text) => {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, (m) => map[m]);
+    };
+
+    // Convert tables
+    markdown = markdown.replace(/^\|(.+)\|$/gm, function(match, p1) {
+      const cells = p1.split('|').map(cell => cell.trim());
+      const isSeparator = cells.every(cell => /^-+$/.test(cell));
+
+      if (isSeparator) {
+        return '<tr class="table-separator"><td colspan="' + cells.length + '"></td></tr>';
+      }
+
+      const isHeader = cells.some(cell => /^:?-+:?$/.test(cell));
+
+      if (isHeader) {
+        return '<tr>' + cells.map(cell => `<th>${cell}</th>`).join('') + '</tr>';
+      }
+
+      return '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
+    });
+
+    markdown = markdown.replace(/<tr>.*<\/tr>(\n<tr>.*<\/tr>)*/g, function(match) {
+      return `<table>${match}</table>`;
+    });
+
+    // Convert headers
+    markdown = markdown.replace(/^(#{1,6})\s+(.*?)$/gm, (match, hashes, content) => {
+      const level = hashes.length;
+      return `<h${level}>${content.trim()}</h${level}>`;
+    });
+
+    // Convert bold text
+    markdown = markdown.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    markdown = markdown.replace(/__(.*?)__/g, '<strong>$1</strong>');
+
+    // Convert italic text
+    markdown = markdown.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    markdown = markdown.replace(/_(.*?)_/g, '<em>$1</em>');
+
+    // Convert strikethrough text
+    markdown = markdown.replace(/~~(.*?)~~/g, '<del>$1</del>');
+
+    // Convert blockquotes
+    markdown = markdown.replace(/^>\s+(.*?)$/gm, '<blockquote>$1</blockquote>');
+
+    // Convert unordered lists
+    markdown = markdown.replace(/^\s*[-*+]\s+(.*?)$/gm, '<li>$1</li>');
+    markdown = markdown.replace(/(<li>.*<\/li>)\s+(?=<li>)/gs, '$1\n</ul>\n<ul>\n');
+    markdown = markdown.replace(/(?:^|\n)(<li>.*<\/li>)/s, '\n<ul>\n$1');
+    markdown = markdown.replace(/(<li>.*<\/li>)(?:\n|$)/s, '$1\n</ul>');
+
+    // Convert ordered lists
+    markdown = markdown.replace(/^\s*(\d+)\.\s+(.*?)$/gm, '<li>$2</li>');
+    markdown = markdown.replace(/(<li>.*<\/li>)\s+(?=<li>)/gs, '$1\n</ol>\n<ol>\n');
+    markdown = markdown.replace(/(?:^|\n)(<li>.*<\/li>)/s, '\n<ol>\n$1');
+    markdown = markdown.replace(/(<li>.*<\/li>)(?:\n|$)/s, '$1\n</ol>');
+
+    // Convert links
+    markdown = markdown.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
+
+    // Convert images
+    markdown = markdown.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1">');
+
+    // Convert code blocks
+    markdown = markdown.replace(/```([\s\S]*?)```/g, (match, code) => {
+      return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
+    });
+
+    // Convert inline code
+    markdown = markdown.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Convert horizontal rules
+    markdown = markdown.replace(/^(?:---|\*\*\*|___)\s*$/gm, '<hr>');
+
+    // Convert paragraphs
+    markdown = markdown.replace(/(?:^|\n\n)((?:(?!\n\n).)*)/g, (match, content) => {
+      if (content.trim() && !content.startsWith('<')) {
+        return `\n<p>${content.trim()}</p>`;
+      }
+      return match;
+    });
+
+    return markdown.trim();
+  }
+
+  function convertMarkdown() {
+    const markdownInput = document.getElementById('markdown-input').value;
+    const htmlOutput = convertMarkdownToHtml(markdownInput);
+    document.getElementById('output').innerHTML = htmlOutput;
+  }
+</script>
+</body>
+</html>
